@@ -1,0 +1,280 @@
+version: '3'
+services:
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: media_radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Brisbane/Australia
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ../config/config/radarr:/config
+      - ./movies:/data/movies
+      - ./downloads:/downloads
+    links:
+      - transmission
+      - nzbget
+      - plex
+    ports:
+      - 7878:7878
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+    restart: unless-stopped
+
+
+  sonarr:
+    image: linuxserver/sonarr
+    restart: "unless-stopped"
+    ports:
+      - 8989:8989
+    environment:
+      - TZ=Brisbane/Australia
+      - PUID=1000
+      - PGID=999
+      - PASSWORD=Ry1an2345!
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ../config/config/sonarr:/config
+      - ./tv:/data/tv
+      - ./downloads:/downloads
+    links:
+      - transmission
+      - nzbget
+      - plex
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+
+  mdblistarr:
+    container_name: mdblistarr
+    image: linaspurinis/mdblistarr:latest
+    environment:
+      - PORT=5353
+    volumes:
+      - ../config/config/mdblistarr/db:/usr/src/db/
+    links:
+      - sonarr
+      - radarr
+    ports:
+      - 5353:5353
+
+  nzbget:
+    image: linuxserver/nzbget
+    restart: "unless-stopped"
+    ports:
+      - 6789:6789
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ../config/config/nzbget:/config
+      - ./downloads:/downloads
+      # - ./tv:/tv
+      # - ./movies:/movies
+    environment:
+      - TZ=Brisbane/Australia
+      - PUID=1000
+      - PGID=999
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+
+  transmission:
+    image: linuxserver/transmission
+    restart: "unless-stopped"
+    ports:
+      - 9091:9091
+      - 51413:51413
+      - 51413:51413/udp
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ../config/config/transmission:/config
+      - ./downloads:/downloads
+      - ../config/config/transmissionWatch:/watch
+    environment:
+      - TZ=Brisbane/Australia
+      - PUID=1000
+      - PGID=999
+
+  plex:
+    image: linuxserver/plex
+    network_mode: "host"
+    restart: "unless-stopped"
+    environment:
+      - VERSION=latest
+      - TZ=Brisbane/Australia
+      - PUID=1000
+      - PGID=999
+    volumes:
+      - ../config/config/plex:/config
+      - ./tv:/data/tvshows
+      - ./movies:/data/movies
+      - ../config/config/plexTranscode:/transcode
+      - ./music:/data/music
+  
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    links:
+      - plex
+      - sonarr
+      - radarr
+    volumes:
+      - ../config/config/overseerr:/config
+    ports:
+      - 5055:5055
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      - ./config/prowlarr/:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+
+  qbittorrent-nox:
+    container_name: qbittorrent-nox
+    environment:
+      #- PAGID=10000
+      #- PGID=1000
+      #- PUID=1000
+      - QBT_EULA=accept
+      - QBT_WEBUI_PORT=8181
+      #- TZ=UTC
+      #- UMASK=022
+    image: qbittorrentofficial/qbittorrent-nox:latest
+    ports:
+      # for bittorrent traffic
+      - 6881:6881/tcp
+      - 6881:6881/udp
+      # for WebUI
+      - 8181:8181/tcp
+    read_only: true
+    stop_grace_period: 30m
+    tmpfs:
+      - /tmp
+    tty: true
+    volumes:
+      - ./config/qbittorent:/config
+      - /mnt/media/downloads:/downloads
+    restart: unless-stopped
+
+  swag:
+    image: lscr.io/linuxserver/swag:latest
+    container_name: swag
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - URL=snappyapps.com.au
+      - VALIDATION=http
+      - SUBDOMAINS=nzbget,sonarr,radarr,plex,overseerr
+      - EMAIL=ryan.knell@gmail.com
+      - ONLY_SUBDOMAINS=true
+    volumes:
+      - ../config/config/nginx:/config
+    ports:
+      - 443:443
+      - 80:80
+    restart: unless-stopped
+
+      #free-spacer:
+      #  container_name: free-spacer
+      #  build:
+      #    context: ./free-spacer
+      #    dockerfile: Dockerfile
+      #  volumes:
+      #    - /mnt/media/tv:/mnt/media/tv
+      #    - /mnt/media/movies:/mnt/media/movies
+      #    - /mnt:/mnt
+
+  opennvpn:
+    image: kylemanna/openvpn
+    restart: 'unless-stopped'
+    ports:
+      - 1194:1194/udp
+    volumes:
+      - ../config/config/openvpn
+    environment:
+      - cap-add=NET_ADMIN
+    
+    
+    
+    
+
+
+  # jellyfin:
+  #      image: jellyfin/jellyfin
+  #      container_name: jellyfin
+  #      user: 1000:1000
+  #      network_mode: 'host'
+  #      volumes:
+  #        - /mnt/media/server/jellyfin/:/config
+  #        - /mnt/media/server/jellyfin/cache:/cache
+  #        - /home/media:/media
+  #        - /mnt/media/tv:/tv
+  #        - /mnt/media/movies:/movies
+  #      restart: 'unless-stopped'
+  #      # Optional - alternative address used for autodiscovery
+  #      environment:
+  #        - JELLYFIN_PublishedServerUrl=http://example.com
+  #      # Optional - may be necessary for docker healthcheck to pass if running in host network mode
+  #      extra_hosts:
+  #        - "host.docker.internal:host-gateway"
+
+  # tdarr:
+  #   container_name: tdarr
+  #   image: ghcr.io/haveagitgat/tdarr:latest
+  #   restart: unless-stopped
+  #   network_mode: bridge
+  #   ports:
+  #     - 8265:8265 # webUI port
+  #     - 8266:8266 # server port
+  #   environment:
+  #     - TZ=Brisbane/Australia
+  #     - PUID=1000
+  #     - PGID=999
+  #     - UMASK_SET=002
+  #     - serverIP=0.0.0.0
+  #     - serverPort=8266
+  #     - webUIPort=8265
+  #     - internalNode=true
+  #     - inContainer=true
+  #     - ffmpegVersion=6
+  #     - nodeName=MyInternalNode
+  #     - NVIDIA_DRIVER_CAPABILITIES=all
+  #     - NVIDIA_VISIBLE_DEVICES=all
+  #   volumes:
+  #     - ../config/tdarr/server:/app/server
+  #     - ../config/tdarr/configs:/app/configs
+  #     - ../config/tdarr/logs:/app/logs
+  #     - .:/media
+  #     - ../config/tdarr/transcode_cache:/temp
+
+  # lidarr:
+  #   image: youegraillot/lidarr-on-steroids
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8686:8686" # Lidarr web UI
+  #     - "6595:6595" # Deemix web UI
+  #   volumes:
+  #     - /mnt/media/server/lidarr/:/config
+  #     - /mnt/media/server/lidarr/deemix:/config_deemix
+  #     - /mnt/media/downloads:/downloads
+  #     - /mnt/media/music:/music
+  #     - /mnt/media/import:/import
