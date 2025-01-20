@@ -1,17 +1,30 @@
 version: '3'
+
+# Environment variables can be overridden by a .env file
+x-environment: &default-env
+  TZ: Brisbane/Australia
+  PUID: 1000
+  PGID: 1000
+
+# Shared volume configurations
+x-volumes: &default-volumes
+  - ${CONFIG_DIR:-.}:/config
+  - ${MEDIA_DIR:-.}/downloads:/downloads
+  - ${MEDIA_DIR:-.}/movies:/data/movies
+  - ${MEDIA_DIR:-.}/tv:/data/tv
+  - ${MEDIA_DIR:-.}/music:/data/music
+  - ${TEMP_DIR:-.}/temp:/temp
+
 services:
   radarr:
     image: lscr.io/linuxserver/radarr:latest
     container_name: media_radarr
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Brisbane/Australia
+      <<: *default-env
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ../config/config/radarr:/config
-      - ./movies:/data/movies
-      - ./downloads:/downloads
+      - ${CONFIG_DIR:-.}/radarr:/config
+      - ${MEDIA_DIR:-.}/movies:/data/movies
+      - ${MEDIA_DIR:-.}/downloads:/downloads
     links:
       - transmission
       - nzbget
@@ -37,9 +50,9 @@ services:
       - PASSWORD=Ry1an2345!
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ../config/config/sonarr:/config
-      - ./tv:/data/tv
-      - ./downloads:/downloads
+      - ${CONFIG_DIR:-.}/sonarr:/config
+      - ${MEDIA_DIR:-.}/tv:/data/tv
+      - ${TEMP_DIR:-.}/sonarr/downloads:/downloads
     links:
       - transmission
       - nzbget
@@ -55,7 +68,7 @@ services:
     environment:
       - PORT=5353
     volumes:
-      - ../config/config/mdblistarr/db:/usr/src/db/
+      - ${CONFIG_DIR:-.}/mdblistarr/db:/usr/src/db/
     links:
       - sonarr
       - radarr
@@ -69,8 +82,8 @@ services:
       - 6789:6789
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ../config/config/nzbget:/config
-      - ./downloads:/downloads
+      - ${CONFIG_DIR:-.}/nzbget:/config
+      - ${TEMP_DIR:-.}/nzbget/downloads:/downloads
       # - ./tv:/tv
       # - ./movies:/movies
     environment:
@@ -91,9 +104,9 @@ services:
       - 51413:51413/udp
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ../config/config/transmission:/config
-      - ./downloads:/downloads
-      - ../config/config/transmissionWatch:/watch
+      - ${CONFIG_DIR:-.}/transmission:/config
+      - ${TEMP_DIR:-.}/transmission/downloads:/downloads
+      - ${TEMP_DIR:-.}/transmission/watch:/watch
     environment:
       - TZ=Brisbane/Australia
       - PUID=1000
@@ -109,11 +122,11 @@ services:
       - PUID=1000
       - PGID=999
     volumes:
-      - ../config/config/plex:/config
-      - ./tv:/data/tvshows
-      - ./movies:/data/movies
-      - ../config/config/plexTranscode:/transcode
-      - ./music:/data/music
+      - ${CONFIG_DIR:-.}/plex:/config
+      - ${MEDIA_DIR:-.}/tv:/data/tvshows
+      - ${MEDIA_DIR:-.}/movies:/data/movies
+      - ${MEDIA_DIR:-.}/music:/data/music
+      - ${TEMP_DIR:-.}/plex/transcode:/transcode
   
   overseerr:
     image: lscr.io/linuxserver/overseerr:latest
@@ -127,7 +140,7 @@ services:
       - sonarr
       - radarr
     volumes:
-      - ../config/config/overseerr:/config
+      - ${CONFIG_DIR:-.}/overseerr:/config
     ports:
       - 5055:5055
     restart: unless-stopped
@@ -140,7 +153,7 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
     volumes:
-      - ./config/prowlarr/:/config
+      - ${CONFIG_DIR:-.}/prowlarr:/config
     ports:
       - 9696:9696
     restart: unless-stopped
@@ -168,8 +181,9 @@ services:
       - /tmp
     tty: true
     volumes:
-      - ./config/qbittorent:/config
-      - /mnt/media/downloads:/downloads
+      - ${CONFIG_DIR:-.}/qbittorent:/config
+      - ${TEMP_DIR:-.}/downloads:/downloads
+      - ${TEMP_DIR:-.}/qbittorrent/temp:/temp
     restart: unless-stopped
 
   swag:
@@ -187,7 +201,7 @@ services:
       - EMAIL=ryan.knell@gmail.com
       - ONLY_SUBDOMAINS=true
     volumes:
-      - ../config/config/nginx:/config
+      - ${CONFIG_DIR:-.}/nginx:/config
     ports:
       - 443:443
       - 80:80
@@ -209,14 +223,7 @@ services:
     ports:
       - 1194:1194/udp
     volumes:
-      - ../config/config/openvpn
-    environment:
-      - cap-add=NET_ADMIN
-    
-    
-    
-    
-
+      - ${CONFIG_DIR:-.}/openvpn:/config
 
   # jellyfin:
   #      image: jellyfin/jellyfin
@@ -260,11 +267,11 @@ services:
   #     - NVIDIA_DRIVER_CAPABILITIES=all
   #     - NVIDIA_VISIBLE_DEVICES=all
   #   volumes:
-  #     - ../config/tdarr/server:/app/server
-  #     - ../config/tdarr/configs:/app/configs
-  #     - ../config/tdarr/logs:/app/logs
-  #     - .:/media
-  #     - ../config/tdarr/transcode_cache:/temp
+  #     - ${CONFIG_DIR:-.}/tdarr/server:/app/server
+  #     - ${CONFIG_DIR:-.}/tdarr/configs:/app/configs
+  #     - ${CONFIG_DIR:-.}/tdarr/logs:/app/logs
+  #     - ${MEDIA_DIR:-.}:/media
+  #     - ${CONFIG_DIR:-.}/tdarr/transcode_cache:/temp
 
   # lidarr:
   #   image: youegraillot/lidarr-on-steroids
@@ -273,8 +280,8 @@ services:
   #     - "8686:8686" # Lidarr web UI
   #     - "6595:6595" # Deemix web UI
   #   volumes:
-  #     - /mnt/media/server/lidarr/:/config
-  #     - /mnt/media/server/lidarr/deemix:/config_deemix
-  #     - /mnt/media/downloads:/downloads
-  #     - /mnt/media/music:/music
-  #     - /mnt/media/import:/import
+  #     - ${MEDIA_DIR:-.}/server/lidarr/:/config
+  #     - ${MEDIA_DIR:-.}/server/lidarr/deemix:/config_deemix
+  #     - ${MEDIA_DIR:-.}/downloads:/downloads
+  #     - ${MEDIA_DIR:-.}/music:/music
+  #     - ${MEDIA_DIR:-.}/import:/import
