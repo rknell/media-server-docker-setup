@@ -24,7 +24,7 @@ services:
     volumes:
       - ${CONFIG_DIR:-.}/radarr:/config
       - ${MEDIA_DIR:-.}/movies:/data/movies
-      - ${MEDIA_DIR:-.}/downloads:/downloads
+      - ${TEMP_DIR:-.}/downloads:/downloads
     links:
       - transmission
       - nzbget
@@ -52,7 +52,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/sonarr:/config
       - ${MEDIA_DIR:-.}/tv:/data/tv
-      - ${TEMP_DIR:-.}/sonarr/downloads:/downloads
+      - ${TEMP_DIR:-.}/downloads:/downloads
     links:
       - transmission
       - nzbget
@@ -83,9 +83,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/nzbget:/config
-      - ${TEMP_DIR:-.}/nzbget/downloads:/downloads
-      # - ./tv:/tv
-      # - ./movies:/movies
+      - ${TEMP_DIR:-.}/downloads:/downloads
     environment:
       - TZ=Brisbane/Australia
       - PUID=1000
@@ -105,7 +103,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/transmission:/config
-      - ${TEMP_DIR:-.}/transmission/downloads:/downloads
+      - ${TEMP_DIR:-.}/downloads:/downloads
       - ${TEMP_DIR:-.}/transmission/watch:/watch
     environment:
       - TZ=Brisbane/Australia
