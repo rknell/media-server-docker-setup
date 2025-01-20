@@ -1,5 +1,3 @@
-version: '3'
-
 # Environment variables can be overridden by a .env file
 x-environment: &default-env
   TZ: Brisbane/Australia
@@ -111,20 +109,31 @@ services:
       - PGID=999
 
   plex:
-    image: linuxserver/plex
-    network_mode: "host"
-    restart: "unless-stopped"
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    ports:
+      - 32400:32400/tcp
+      - 1900:1900/udp
+      - 5353:5353/udp
+      - 8324:8324/tcp
+      - 32410:32410/udp
+      - 32412:32412/udp
+      - 32413:32413/udp
+      - 32414:32414/udp
+      - 32469:32469/tcp
     environment:
-      - VERSION=latest
-      - TZ=Brisbane/Australia
       - PUID=1000
-      - PGID=999
+      - PGID=1000
+      - TZ=Etc/UTC
+      - VERSION=docker
+      - PLEX_CLAIM=claim-tnxzsHsxg-1SEHWUKd2L
     volumes:
       - ${CONFIG_DIR:-.}/plex:/config
       - ${MEDIA_DIR:-.}/tv:/data/tvshows
       - ${MEDIA_DIR:-.}/movies:/data/movies
       - ${MEDIA_DIR:-.}/music:/data/music
       - ${TEMP_DIR:-.}/plex/transcode:/transcode
+    restart: unless-stopped
   
   overseerr:
     image: lscr.io/linuxserver/overseerr:latest
@@ -215,13 +224,16 @@ services:
       #    - /mnt/media/movies:/mnt/media/movies
       #    - /mnt:/mnt
 
-  opennvpn:
-    image: kylemanna/openvpn
-    restart: 'unless-stopped'
-    ports:
-      - 1194:1194/udp
-    volumes:
-      - ${CONFIG_DIR:-.}/openvpn:/config
+  # openvpn:
+  #   image: kylemanna/openvpn
+  #   container_name: openvpn
+  #   cap_add:
+  #     - NET_ADMIN
+  #   restart: unless-stopped
+  #   ports:
+  #     - "1194:1194/udp"
+  #   volumes:
+  #     - ${CONFIG_DIR:-.}/openvpn-data:/etc/openvpn
 
   # jellyfin:
   #      image: jellyfin/jellyfin

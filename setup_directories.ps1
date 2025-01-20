@@ -58,6 +58,19 @@ $tempDirs = @(
     "$tempDir/qbittorrent/temp"
 )
 
+# Create base directories
+$configDir = Resolve-Path "..\config"
+$mediaDir = Resolve-Path "..\media"
+$tempDir = Resolve-Path "..\temp"
+
+# Create NZBGet specific directories
+$downloadDirs = @(
+    "$tempDir\downloads",
+    "$tempDir\downloads\completed",
+    "$tempDir\downloads\completed\Series",
+    "$tempDir\downloads\incomplete"
+)
+
 Write-Host "Creating directory structure..."
 Write-Host "Config directory: $configDir"
 Write-Host "Media directory: $mediaDir"
@@ -89,6 +102,16 @@ foreach ($dir in $tempDirs) {
     if (-not (Test-Path $dir)) {
         Write-Host "Creating directory: $dir"
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    } else {
+        Write-Host "Directory already exists: $dir"
+    }
+}
+
+# Create NZBGet specific directories
+foreach ($dir in $downloadDirs) {
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force
+        Write-Host "Created directory: $dir"
     } else {
         Write-Host "Directory already exists: $dir"
     }
